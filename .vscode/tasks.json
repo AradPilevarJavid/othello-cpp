@@ -4,12 +4,12 @@
         {
             "label": "Build Othello",
             "type": "shell",
-            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "command": "g++",
             "args": [
                 "-g",
                 "*.cpp",
                 "-o",
-                "main.exe"
+                "main"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
