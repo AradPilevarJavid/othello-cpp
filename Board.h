@@ -1,13 +1,15 @@
-#ifndef BOARD_H
-#define BOARD_H
+#ifndef BOARD_H_
+#define BOARD_H_
+#define size 8
 
 class Board {
 private:
-    char board[8][8];
+    char board[size][size];
 
 public:
     Board();
-    void print() const;
+    void printBoard() const;
+    bool placePiece(int row, int col, char piece);
 };
 
 #endif

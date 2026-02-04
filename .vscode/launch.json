@@ -5,13 +5,11 @@
             "name": "Launch Othello",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/main.exe",
+            "program": "${workspaceFolder}/othello.exe",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": true,
-            "preLaunchTask": "Build Othello"
+            "console": "integratedTerminal",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe"
         }
     ]
 }
