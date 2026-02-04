@@ -1,10 +1,10 @@
-bool possibleMove = true;
+// bool possibleMove = true;
 
-bool turnW, turnB;
+// bool turnW, turnB;
 
 
-while (possibleMove){
-    if(turnW){
-        
-    }
-}
+// while (possibleMove){
+//     if(turnW){
+
+//     }
+// }
