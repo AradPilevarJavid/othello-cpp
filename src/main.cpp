@@ -11,6 +11,10 @@ int main() {
 
     cout << "Enter piece (B/W): ";
     cin >> piece;
+    if (piece != ("B" || "W" || "b" || "w")){
+        cout << "Enter the piece char correctly";
+        return 0;
+    }
 
     cout << "Enter row and column (0-7): ";
     cin >> row >> col;
