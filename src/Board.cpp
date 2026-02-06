@@ -4,17 +4,17 @@ using namespace std;
 
 
 Board::Board() {
-    for (int i = 0; i < 8; i++){
+    for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++)
-            board[i][j] = '_';
-        for (int k = 0; k < 9; k++)
-            cout << "|";
-    }
-        }
+            board[i][j] = '.';
+}
 
 
 
-bool Board::placePiece(int row, int col, char Piece){
+bool Board::placePiece(int row, int col, char piece) {
+    if (row < 0 || row >= 8 || col < 0 || col >= 8){
+        return false;
+    }board[row][col] = piece;
     return true;
 }
 
