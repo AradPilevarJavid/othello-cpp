@@ -1,38 +1,44 @@
 #include <iostream>
+#include <cstdlib>
 #include "Game.h"
 
 Game::Game() {
-    current = u8"🟩";
+    char choice;
+    std::cout << "Which peice do you want to play as? (G / W) ";
+    std::cin >> choice;
+    if (choice == 'G' || choice == 'g') {currentPlayer = u8"🟩";}
+    else if(choice == 'W' || choice == 'w') {currentPlayer = u8"⬜";}
+    else{std::cout << "Invalid input."; exit(0);}
 }
 
 void Game::run() {
     while (true) {
         board.print();
 
-        if (!board.hasAnyMove(current)) {
-            std::string other = current == u8"🟩" ? u8"⬜" : u8"🟩";
-            if (!board.hasAnyMove(other)) break;
-            current = other;
+        if (!board.hasAnyMove(currentPlayer)) {
+            std::string otherPlayer = currentPlayer == u8"🟩" ? u8"⬜" : u8"🟩";
+            if (!board.hasAnyMove(otherPlayer)) break;
+            currentPlayer = otherPlayer;
             continue;
         }
 
-        int r, c;
-        std::cout << (current == u8"🟩" ? "Green" : "White") << " move (row col): ";
-        if (!(std::cin >> r >> c)) return;
+        int row, col;
+        std::cout << (currentPlayer == u8"🟩" ? "Green" : "White") << " move (row / col): ";
+        if (!(std::cin >> row >> col)) return;
 
-        if (!board.placePiece(r,c,current)) {
+        if (!board.placePiece(row,col,currentPlayer)) {
             std::cout << "Invalid move\n";
             continue;
         }
 
-        current = current == u8"🟩" ? u8"⬜" : u8"🟩";
+        currentPlayer = currentPlayer == u8"🟩" ? u8"⬜" : u8"🟩";
     }
 
     board.print();
-    int g = board.count(u8"🟩");
-    int w = board.count(u8"⬜");
+    int greenScore = board.count(u8"🟩");
+    int whiteScore = board.count(u8"⬜");
 
-    if (g > w) std::cout << "Green wins\n";
-    else if (w > g) std::cout << "White wins\n";
+    if (greenScore > whiteScore) std::cout << "Green wins\n";
+    else if (whiteScore > greenScore) std::cout << "White wins\n";
     else std::cout << "Draw\n";
 }

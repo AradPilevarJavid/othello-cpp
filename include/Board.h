@@ -5,8 +5,8 @@
 
 class Board {
 private:
-    std::string board[8][8];
-
+    static const int SIZE = 8;
+    std::string board[SIZE][SIZE];
     bool inBounds(int r, int c) const;
     std::string opponent(const std::string& p) const;
     bool hasFlippable(int r, int c, const std::string& p) const;

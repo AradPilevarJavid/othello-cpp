@@ -7,7 +7,7 @@
 class Game {
 private:
     Board board;
-    std::string current;
+    std::string currentPlayer;
 
 public:
     Game();
