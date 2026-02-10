@@ -4,7 +4,6 @@
 #define RESET "\033[0m"
 #define BLUE_FG "\033[34m"
 
-using namespace std;
 
 Board::Board() {
     for (int i = 0; i < 8; i++)
@@ -18,17 +17,17 @@ Board::Board() {
 }
 
 bool Board::inBounds(int row, int col) const {
-    return (row >= 0 && row < 8 && col >= 0 && col < 8);
+    return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
-string Board::opponent(const string& piece) const {
+std::string Board::opponent(const std::string& piece) const {
     return piece == u8"🟩" ? u8"⬜" : u8"🟩";
 }
 
-bool Board::hasFlippable(int row, int col, const string& piece) const {
+bool Board::hasFlippable(int row, int col, const std::string& piece) const {
     int dx[8] = {-1,-1,-1,0,0,1,1,1};
     int dy[8] = {-1,0,1,-1,1,-1,0,1};
-    string o = opponent(piece);
+    std::string o = opponent(piece);
 
     for (int d = 0; d < 8; d++) {
         int i = row + dx[d], j = col + dy[d];
@@ -42,10 +41,10 @@ bool Board::hasFlippable(int row, int col, const string& piece) const {
     return false;
 }
 
-void Board::flip(int row, int col, const string& piece) {
+void Board::flip(int row, int col, const std::string& piece) {
     int dx[8] = {-1,-1,-1,0,0,1,1,1};
     int dy[8] = {-1,0,1,-1,1,-1,0,1};
-    string o = opponent(piece);
+    std::string o = opponent(piece);
 
     for (int d = 0; d < 8; d++) {
         int i = row + dx[d], j = col + dy[d];
@@ -65,7 +64,7 @@ void Board::flip(int row, int col, const string& piece) {
     }
 }
 
-bool Board::placePiece(int row, int col, const string& piece) {
+bool Board::placePiece(int row, int col, const std::string& piece) {
     if (!inBounds(row,col) || board[row][col] != "") return false;
     if (!hasFlippable(row,col,piece)) return false;
     board[row][col] = piece;
@@ -73,7 +72,7 @@ bool Board::placePiece(int row, int col, const string& piece) {
     return true;
 }
 
-bool Board::hasAnyMove(const string& piece) const {
+bool Board::hasAnyMove(const std::string& piece) const {
     for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++)
             if (board[i][j] == "" && hasFlippable(i,j,piece))
@@ -81,7 +80,7 @@ bool Board::hasAnyMove(const string& piece) const {
     return false;
 }
 
-int Board::count(const string& piece) const {
+int Board::count(const std::string& piece) const {
     int c = 0;
     for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++)
@@ -90,30 +89,30 @@ int Board::count(const string& piece) const {
 }
 
 void Board::print() const {
-    cout << " " << BLUE_FG 
-         << "  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐" 
+    std::cout << " " << BLUE_FG
+         << "  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐"
          << RESET << "\n";
 
     for (int i = 0; i < 8; i++) {
-        cout << " " << i << " " << BLUE_FG << "│" << RESET;
+        std::cout << " " << i << " " << BLUE_FG << "│" << RESET;
         for (int j = 0; j < 8; j++) {
             if (board[i][j].length() > 1) {
-                cout << " " << board[i][j] << "   " << BLUE_FG << "│" << RESET;
+                std::cout << "  " << board[i][j] << "  " << BLUE_FG << "│" << RESET;
             } else {
-                cout << "  " << board[i][j] << "    " << BLUE_FG << "│" << RESET;
+                std::cout << "   " << board[i][j] << "   " << BLUE_FG << "│" << RESET;
             }
         }
-        cout << "\n";
+        std::cout << "\n";
         if (i != 7) {
-            cout << " " << BLUE_FG 
-                 << "  ├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤" 
+            std::cout << " " << BLUE_FG
+                 << "  ├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤"
                  << RESET << "\n";
         }
     }
 
-    cout << " " << BLUE_FG 
-         << "  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘" 
+    std::cout << " " << BLUE_FG
+         << "  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘"
          << RESET << "\n";
 
-    cout << "     0      1      2      3      4      5      6      7 \n";
+    std::cout << "     0      1      2      3      4      5      6      7 \n";
 }

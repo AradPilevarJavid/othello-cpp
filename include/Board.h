@@ -7,17 +7,17 @@ class Board {
 private:
     static const int SIZE = 8;
     std::string board[SIZE][SIZE];
-    bool inBounds(int r, int c) const;
-    std::string opponent(const std::string& p) const;
-    bool hasFlippable(int r, int c, const std::string& p) const;
-    void flip(int r, int c, const std::string& p);
+    bool inBounds(int row, int col) const;
+    std::string opponent(const std::string& piece) const;
+    bool hasFlippable(int row, int col, const std::string& piece) const;
+    void flip(int row, int col, const std::string& piece);
 
 public:
     Board();
-    bool placePiece(int r, int c, const std::string& p);
-    bool hasAnyMove(const std::string& p) const;
+    bool placePiece(int row, int col, const std::string& piece);
+    bool hasAnyMove(const std::string& piece) const;
     void print() const;
-    int count(const std::string& p) const;
+    int count(const std::string& piece) const;
 };
 
 #endif
