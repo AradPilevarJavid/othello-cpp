@@ -4,7 +4,6 @@
 #include <fstream>
 #include <iomanip>
 #include <random>
-#include <vector>
 #include "Game.h"
 
 #define RESET "\033[0m"
@@ -223,26 +222,21 @@ void Game::choosePiece() {
 }
 
 void Game::getComputerMove(int& row, int& col) {
-    std::vector<int> validRows;
-    std::vector<int> validCols;
+    std::uniform_int_distribution<int> dist(0, 7);
     
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (board.canPlace(i, j, currentPlayer)) {
-                validRows.push_back(i);
-                validCols.push_back(j);
-            }
+    while (true) {
+        row = dist(randomGenerator);
+        col = dist(randomGenerator);
+        
+        if (board.canPlace(row, col, currentPlayer)) {
+            return;
         }
-    }
-    
-    if (validRows.size() > 0) {
-        std::uniform_int_distribution<int> distribution(0, validRows.size() - 1);
-        int index = distribution(randomGenerator);
-        row = validRows[index];
-        col = validCols[index];
-    } else {
-        row = -1;
-        col = -1;
+        
+        if (!board.hasAnyMove(currentPlayer)) {
+            row = -1;
+            col = -1;
+            return;
+        }
     }
 }
 
@@ -509,9 +503,9 @@ void Game::run() {
 
                     std::cout << "Scoreboard:\n";
                     std::cout << "┌─────────────────────┐\n";
-                    std::cout << "│ Green wins: " << std::setw(4) << gWins << " │\n";
-                    std::cout << "│ White wins: " << std::setw(4) << wWins << " │\n";
-                    std::cout << "│ Draws:      " << std::setw(4) << draws << " │\n";
+                    std::cout << "│ Green wins: " << std::setw(4) << gWins << "    │\n";
+                    std::cout << "│ White wins: " << std::setw(4) << wWins << "    │\n";
+                    std::cout << "│ Draws:      " << std::setw(4) << draws << "    │\n";
                     if (humanWins > 0 || computerWins > 0) {
                         std::cout << "├─────────────────────┤\n";
                         std::cout << "│ Human wins: " << std::setw(4) << humanWins << " │\n";
