@@ -1,45 +1,11 @@
-#include <iostream>
 #include "Board.h"
+#include <iostream>
 
 #define RESET "\033[0m"
 #define BLUE_FG "\033[34m"
 #define RED_FG "\033[31m"
-
-std::string Board::getPiece(int row, int col) const {
-    if (inBounds(row, col)) {
-        return board[row][col];
-    }
-    return "";
-}
-
-void Board::setPiece(int row, int col, const std::string& piece) {
-    if (inBounds(row, col)) {
-        board[row][col] = piece;
-    }
-}
-
-void Board::save(std::ostream& out) const {
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (board[i][j] == u8"🟩") out << 'G';
-            else if (board[i][j] == u8"⬜") out << 'W';
-            else out << '.';
-        }
-        out << '\n';
-    }
-}
-
-void Board::load(std::istream& in) {
-    char c;
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            in >> c;
-            if (c == 'G') board[i][j] = u8"🟩";
-            else if (c == 'W') board[i][j] = u8"⬜";
-            else board[i][j] = "";
-        }
-    }
-}
+#define GREEN_FG "\033[32m"
+#define YELLOW_FG "\033[33m"
 
 Board::Board() {
     for (int i = 0; i < SIZE; i++)
@@ -52,11 +18,24 @@ Board::Board() {
     board[4][3] = u8"⬜";
 }
 
+bool Board::canPlace(int row, int col, const std::string& piece) const {
+    if (!inBounds(row,col) || board[row][col] != "") return false;
+    return hasFlippable(row,col,piece);
+}
+
+std::string Board::getPiece(int row, int col) const {
+    if (inBounds(row, col)) return board[row][col];
+    return "";
+}
+
+void Board::setPiece(int row, int col, const std::string& piece) {
+    if (inBounds(row, col)) board[row][col] = piece;
+}
+
 bool Board::inBounds(int row, int col) const {
     return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
 }
 
-// I am certain that there would be no occurance of emojies wiith a color other that green or white.so this function works all fine.
 std::string Board::opponent(const std::string& piece) const {
     return piece == u8"🟩" ? u8"⬜" : u8"🟩";
 }
@@ -70,9 +49,7 @@ bool Board::hasFlippable(int row, int col, const std::string& piece) const {
         int i = row + dx[d], j = col + dy[d];
         if (!inBounds(i,j) || board[i][j] != o) continue;
         i += dx[d]; j += dy[d];
-        while (inBounds(i,j) && board[i][j] == o) {
-            i += dx[d]; j += dy[d];
-        }
+        while (inBounds(i,j) && board[i][j] == o) { i += dx[d]; j += dy[d]; }
         if (inBounds(i,j) && board[i][j] == piece) return true;
     }
     return false;
@@ -88,9 +65,7 @@ void Board::flip(int row, int col, const std::string& piece) {
         if (!inBounds(i,j) || board[i][j] != o) continue;
         int si = i, sj = j;
         i += dx[d]; j += dy[d];
-        while (inBounds(i,j) && board[i][j] == o) {
-            i += dx[d]; j += dy[d];
-        }
+        while (inBounds(i,j) && board[i][j] == o) { i += dx[d]; j += dy[d]; }
         if (inBounds(i,j) && board[i][j] == piece) {
             while (si != i || sj != j) {
                 board[si][sj] = piece;
@@ -110,46 +85,43 @@ bool Board::placePiece(int row, int col, const std::string& piece) {
 }
 
 bool Board::hasAnyMove(const std::string& piece) const {
-    for (int i = 0; i < 8; i++)
-        for (int j = 0; j < 8; j++)
-            if (board[i][j] == "" && hasFlippable(i,j,piece))
-                return true;
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (board[i][j] == "" && hasFlippable(i,j,piece)) return true;
     return false;
 }
 
 int Board::count(const std::string& piece) const {
     int c = 0;
-    for (int i = 0; i < 8; i++)
-        for (int j = 0; j < 8; j++)
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
             if (board[i][j] == piece) c++;
     return c;
 }
 
-void Board::print() const {
-    std::cout << " " << BLUE_FG
-         << "  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐"
-         << RESET << "\n";
+void Board::print(const std::string& highlightPiece) const {
+    std::cout << " " << BLUE_FG << "  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐" << RESET << "\n";
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < SIZE; i++) {
         std::cout << " " << i << " " << BLUE_FG << "│" << RESET;
-        for (int j = 0; j < 8; j++) {
-            if (board[i][j].length() > 1) {
+        for (int j = 0; j < SIZE; j++) {
+            if (board[i][j] != "") {
                 std::cout << "  " << board[i][j] << "  " << BLUE_FG << "│" << RESET;
+            } else if (highlightPiece != "" && canPlace(i,j,highlightPiece)) {
+                std::cout << "  " << YELLOW_FG << "• " << RESET << "  " << BLUE_FG << "│" << RESET;
             } else {
-                std::cout << "   " << board[i][j] << "   " << BLUE_FG << "│" << RESET;
+                std::cout << "      " << BLUE_FG << "│" << RESET;
             }
         }
         std::cout << "\n";
-        if (i != 7) {
-            std::cout << " " << BLUE_FG
-                 << "  ├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤"
-                 << RESET << "\n";
-        }
+        if (i != SIZE-1) std::cout << " " << BLUE_FG
+            << "  ├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤" << RESET << "\n";
     }
-
     std::cout << " " << BLUE_FG
-         << "  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘"
-         << RESET << "\n";
-
+        << "  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘" << RESET << "\n";
     std::cout << "     0      1      2      3      4      5      6      7 \n";
+}
+
+void Board::showValidMoves(const std::string& piece) {
+    print(piece);
 }
