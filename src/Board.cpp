@@ -3,11 +3,47 @@
 
 #define RESET "\033[0m"
 #define BLUE_FG "\033[34m"
+#define RED_FG "\033[31m"
 
+std::string Board::getPiece(int row, int col) const {
+    if (inBounds(row, col)) {
+        return board[row][col];
+    }
+    return "";
+}
+
+void Board::setPiece(int row, int col, const std::string& piece) {
+    if (inBounds(row, col)) {
+        board[row][col] = piece;
+    }
+}
+
+void Board::save(std::ostream& out) const {
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j] == u8"🟩") out << 'G';
+            else if (board[i][j] == u8"⬜") out << 'W';
+            else out << '.';
+        }
+        out << '\n';
+    }
+}
+
+void Board::load(std::istream& in) {
+    char c;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            in >> c;
+            if (c == 'G') board[i][j] = u8"🟩";
+            else if (c == 'W') board[i][j] = u8"⬜";
+            else board[i][j] = "";
+        }
+    }
+}
 
 Board::Board() {
-    for (int i = 0; i < 8; i++)
-        for (int j = 0; j < 8; j++)
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
             board[i][j] = "";
 
     board[3][3] = u8"🟩";
@@ -17,9 +53,10 @@ Board::Board() {
 }
 
 bool Board::inBounds(int row, int col) const {
-    return row >= 0 && row < 8 && col >= 0 && col < 8;
+    return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
 }
 
+// I am certain that there would be no occurance of emojies wiith a color other that green or white.so this function works all fine.
 std::string Board::opponent(const std::string& piece) const {
     return piece == u8"🟩" ? u8"⬜" : u8"🟩";
 }

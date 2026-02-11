@@ -1,5 +1,5 @@
-#ifndef GAME_H_
-#define GAME_H_
+#ifndef GAME_H
+#define GAME_H
 
 #include "Board.h"
 #include <string>
@@ -8,15 +8,22 @@ class Game {
 private:
     Board board;
     std::string currentPlayer;
-
-    void clearScreen();
-    void intro();
-    int menu();
-
+    
 public:
     Game();
     void run();
+    void intro();
+    int menu();
+    void clearScreen();
     void choosePiece();
+    void playGame();
+    // void showScoreboard();
+    bool saveGame();
+    bool loadGame();
+    // void deleteSave();
+    bool saveToFile(const std::string& filename);
+    bool loadFromFile(const std::string& filename);
+    void showSaveMenu();
 };
 
 #endif

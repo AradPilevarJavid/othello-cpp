@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <fstream>
 #include "Game.h"
 
 #define RESET "\033[0m"
@@ -9,13 +10,117 @@
 #define GREEN_FG "\033[32m"
 #define BRIGHTBLACK_FG "\033[90m"
 
+Game::Game() {
+    currentPlayer = u8"🟩";
+}
+
+//I love this function:
 void Game::clearScreen() {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        system("clear");
-    #endif
-        std::cout.flush();
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+    std::cout.flush();
+}
+
+bool Game::saveToFile(const std::string& filename) {
+    std::ofstream out(filename);
+    if (!out.is_open()) return false;
+    
+    out << (currentPlayer == u8"🟩" ? 'G' : 'W') << "\n";
+    
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            std::string piece = board.getPiece(i, j);
+            if (piece == u8"🟩") out << 'G';
+            else if (piece == u8"⬜") out << 'W';
+            else out << '.';
+        }
+        out << "\n";
+    }
+    out.close();
+    return true;
+}
+
+bool Game::loadFromFile(const std::string& filename) {
+    std::ifstream in(filename);
+    if (!in.is_open()) return false;
+    
+    char player;
+    in >> player;
+    currentPlayer = (player == 'G') ? u8"🟩" : u8"⬜";
+    
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            char c;
+            in >> c;
+            if (c == 'G') board.setPiece(i, j, u8"🟩");
+            else if (c == 'W') board.setPiece(i, j, u8"⬜");
+            else board.setPiece(i, j, "");
+        }
+    }
+    in.close();
+    return true;
+}
+
+void Game::showSaveMenu() {
+    clearScreen();
+    std::cout << BLUE_FG << "   ┌───────────────────────────────────────────────────────┐\n";
+    std::cout << "   │" << RESET << "                     Save Game                         " << BLUE_FG << "│\n";
+    std::cout << "   ├───────────────────────────────────────────────────────┤\n";
+    std::cout << "   │" << RESET << "   Enter filename (e.g., game1.txt):                   " << BLUE_FG << "│\n";
+    std::cout << "   └───────────────────────────────────────────────────────┘\n" << RESET;
+    std::cout << "   Filename: ";
+
+    std::string filename;
+    std::cin >> filename;
+    
+    if (saveToFile(filename)) {
+        std::cout << GREEN_FG << "\n   Game saved successfully to " << filename << RESET << "\n";
+    } else {
+        std::cout << RED_FG << "\n   Error saving game!" << RESET << "\n";
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+}
+
+bool Game::saveGame() {
+    std::ofstream out("othello_save.txt");
+    if (!out.is_open()) {
+        return false;
+    }
+    out << currentPlayer << "\n";
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            out << board.getPiece(i, j) << " ";
+        }
+        out << "\n";
+    }
+    out.close();
+    std::cout << GREEN_FG << "Game saved!\n" << RESET;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    return true;
+}
+
+bool Game::loadGame() {
+    std::ifstream in("othello_save.txt");
+    if (!in.is_open()) {
+        std::cout << RED_FG << "No saved game found!\n" << RESET;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        return false;
+    }
+    in >> currentPlayer;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            std::string piece;
+            in >> piece;
+            board.setPiece(i, j, piece);
+        }
+    }
+    in.close();
+    std::cout << GREEN_FG << "Game loaded!\n" << RESET;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    return true;
 }
 
 void Game::intro() {
@@ -38,37 +143,30 @@ int Game::menu() {
         std::cout << "   │";
         if (i == 2) std::cout << "                       Othello                         │";
         else if (i == 4) std::cout << "\033[32m   [0] New Game                                        \033[34m│";
-        else if (i == 5) std::cout << "\033[32m   [1] Load Game                                       \033[34m│";
-        else if (i == 6) std::cout << "\033[32m   [2] Scoreboard                                      \033[34m│";
-        else if (i == 7) std::cout << "\033[31m   [3] Exit                                            \033[34m│";
+        else if (i == 5) std::cout << "\033[32m   [1] Load from save.txt                              \033[34m│";
+        else if (i == 6) std::cout << "\033[32m   [2] Load from file                                  \033[34m│";
+        else if (i == 7) std::cout << "\033[32m   [3] Scoreboard                                      \033[34m│";
+        else if (i == 8) std::cout << "\033[31m   [4] Exit                                            \033[34m│";
         else std::cout << "                                                       │";
         std::cout << "\n";
     }
     std::cout << "   └───────────────────────────────────────────────────────┘\n\033[0m";
+    
     int c;
     std::cin >> c;
     return c;
 }
 
-Game::Game() {
-}
-
-void Game::choosePiece(){
+void Game::choosePiece() {
     char choice;
-    std::cout << BRIGHTBLACK_FG << "Which piece do you want to play as? (" << GREEN_FG << "G " << BRIGHTBLACK_FG <<"/" << RESET << " W" << BRIGHTBLACK_FG << ") ";
+    std::cout << BRIGHTBLACK_FG << "Which piece do you want to play as? (" << GREEN_FG << "G " << BRIGHTBLACK_FG << "/" << RESET << " W" << BRIGHTBLACK_FG << ") ";
     std::cin >> choice;
     if (choice == 'G' || choice == 'g') currentPlayer = u8"🟩";
     else if (choice == 'W' || choice == 'w') currentPlayer = u8"⬜";
     else exit(0);
 }
 
-void Game::run() {
-    intro();
-    int c = menu();
-    clearScreen();
-    if (c != 0) return;
-
-    choosePiece();
+void Game::playGame() {
     clearScreen();
 
     while (true) {
@@ -81,12 +179,23 @@ void Game::run() {
             continue;
         }
 
-        int row, col;
-        std::cout << (currentPlayer == u8"🟩" ? "Green" : "White") << " move (row col): ";
-        if (!(std::cin >> row >> col)) return;
+        std::cout << (currentPlayer == u8"🟩" ? "Green" : "White") << " move (row col) or 's' to save: ";
+        std::string input;
+        std::cin >> input;
+        
+        if (input == "s" || input == "S") {
+            showSaveMenu();
+            clearScreen();
+            continue;
+        }
+        
+        int row = std::stoi(input);
+        int col;
+        std::cin >> col;
 
         if (!board.placePiece(row, col, currentPlayer)) {
-            std::cout << "Invalid move\n";
+            std::cout << RED_FG << "Invalid move!" << RESET << "\n";
+            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
             clearScreen();
             continue;
         }
@@ -101,4 +210,58 @@ void Game::run() {
     if (g > w) std::cout << "Green wins\n";
     else if (w > g) std::cout << "White wins\n";
     else std::cout << "Draw\n";
+    
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
 }
+
+void Game::run() {
+    clearScreen();
+    intro();
+    
+    while (true) {
+        int c = menu();
+        clearScreen();
+
+    switch (c) {
+        case 0:
+            choosePiece();
+            playGame();
+            break;
+        case 1:
+            if (loadGame()) {
+                playGame();
+            }
+            break;
+        case 2: {
+            std::cout << "\nEnter filename to load: ";
+            std::string filename;
+            std::cin >> filename;
+            if (loadFromFile(filename)) {
+                std::cout << GREEN_FG << "Game loaded from " << filename << RESET << "\n";
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                playGame();
+            } else {
+                std::cout << RED_FG << "Failed to load from " << filename << RESET << "\n";
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+            }
+            break;
+        }
+        case 3:
+            std::cout << "\nDisplaying scoreboard...\n";
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            clearScreen();
+            break;
+        case 4:
+            std::cout << "\nGoodbye! Thanks for playing.\n";
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            clearScreen();
+            return;
+        default:
+            std::cout << "\nInvalid choice! Please try again.\n";
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            clearScreen();
+    }
+        }
+    }

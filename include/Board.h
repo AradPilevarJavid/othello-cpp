@@ -18,6 +18,10 @@ public:
     bool hasAnyMove(const std::string& piece) const;
     void print() const;
     int count(const std::string& piece) const;
+    void save(std::ostream& out) const;
+    void load(std::istream& in);
+    std::string getPiece(int row, int col) const;
+    void setPiece(int row, int col, const std::string& piece);
 };
 
 #endif
