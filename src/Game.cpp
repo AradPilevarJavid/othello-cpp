@@ -3,16 +3,24 @@
 #include <thread>
 #include <fstream>
 #include <iomanip>
+#include <random>
+#include <vector>
 #include "Game.h"
 
 #define RESET "\033[0m"
 #define BLUE_FG "\033[34m"
 #define RED_FG "\033[31m"
 #define GREEN_FG "\033[32m"
+#define YELLOW_FG "\033[33m"
 #define BRIGHTBLACK_FG "\033[90m"
 
 Game::Game() {
     currentPlayer = u8"🟩";
+    singlePlayer = false;
+    humanPlayer = u8"🟩";
+    
+    unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
+    randomGenerator = std::mt19937(seed);
 }
 
 //I love this function:
@@ -23,6 +31,29 @@ void Game::clearScreen() {
     system("clear");
 #endif
     std::cout.flush();
+}
+
+void Game::chooseGameMode() {
+    clearScreen();
+    std::cout << BLUE_FG << "   ┌───────────────────────────────────────────────────────┐\n";
+    std::cout << "   │" << RESET << "                   Select Game Mode                    " << BLUE_FG << "│\n";
+    std::cout << "   ├───────────────────────────────────────────────────────┤\n";
+    std::cout << "   │" << RESET << "   [1] Single Player (vs AI)                           " << BLUE_FG << "│\n";
+    std::cout << "   │" << RESET << "   [2] Two Players                                     " << BLUE_FG << "│\n";
+    std::cout << "   └───────────────────────────────────────────────────────┘\n" << RESET;
+    
+    int choice;
+    std::cout << "   Enter your choice: ";
+    std::cin >> choice;
+    
+    if (choice == 1) {
+        singlePlayer = true;
+        choosePiece(); 
+        humanPlayer = currentPlayer;
+    } else {
+        singlePlayer = false;
+        choosePiece();
+    }
 }
 
 void Game::startTimer() {
@@ -150,7 +181,7 @@ void Game::intro() {
 int Game::menu() {
     std::cout << "\033[34m";
     std::cout << "   ┌───────────────────────────────────────────────────────┐\n";
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 11; i++) {
         std::cout << "   │";
         if (i == 2) std::cout << "                       Othello                         │";
         else if (i == 4) std::cout << "\033[32m   [0] New Game                                        \033[34m│";
@@ -191,17 +222,161 @@ void Game::choosePiece() {
         }
 }
 
-void Game::playGame() {
+void Game::getComputerMove(int& row, int& col) {
+    std::vector<int> validRows;
+    std::vector<int> validCols;
+    
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board.canPlace(i, j, currentPlayer)) {
+                validRows.push_back(i);
+                validCols.push_back(j);
+            }
+        }
+    }
+    
+    if (validRows.size() > 0) {
+        std::uniform_int_distribution<int> distribution(0, validRows.size() - 1);
+        int index = distribution(randomGenerator);
+        row = validRows[index];
+        col = validCols[index];
+    } else {
+        row = -1;
+        col = -1;
+    }
+}
+
+void Game::playSinglePlayer() {
+    clearScreen();
+    startTimer();
+    
+    while (true) {
+        std::cout << BLUE_FG << "⏱️ Time: " << RESET 
+                  << std::fixed << std::setprecision(1) 
+                  << gameDurationSeconds() << " seconds" 
+                  << "  |  ";
+        
+        if (currentPlayer == u8"🟩") std::cout << "🟩 Green";
+        else std::cout << "⬜ White";
+        
+        if (currentPlayer == humanPlayer) std::cout << " (YOU)";
+        else std::cout << " (COMPUTER)";
+        
+        std::cout << "\n\n";
+
+        board.showValidMoves(currentPlayer);
+
+        if (!board.hasAnyMove(currentPlayer)) {
+            std::string other = currentPlayer == u8"🟩" ? u8"⬜" : u8"🟩";
+            if (!board.hasAnyMove(other)) break;
+            currentPlayer = other;
+            continue;
+        }
+
+        if (currentPlayer == humanPlayer) {
+            std::cout << "Your move (row col) or 's' to save: ";
+            std::string input;
+            std::cin >> input;
+            
+            if (input == "s" || input == "S") {
+                showSaveMenu();
+                clearScreen();
+                continue;
+            }
+            
+            int row = std::stoi(input);
+            int col;
+            std::cin >> col;
+
+            if (!board.placePiece(row, col, currentPlayer)) {
+                std::cout << RED_FG << "Invalid move!" << RESET << "\n";
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+                clearScreen();
+                continue;
+            }
+        } 
+        else {
+            std::cout << "Computer is thinking";
+            std::cout.flush();
+            for (int i = 0; i < 3; i++) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+                std::cout << ".";
+                std::cout.flush();
+            }
+            std::cout << "\n";
+            
+            int row, col;
+            getComputerMove(row, col);
+            
+            if (row == -1) {
+                std::cout << "Computer has no move!\n";
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                currentPlayer = humanPlayer;
+                continue;
+            }
+            
+            board.placePiece(row, col, currentPlayer);
+            std::cout << "Computer placed at (" << row << ", " << col << ")\n";
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+
+        currentPlayer = currentPlayer == u8"🟩" ? u8"⬜" : u8"🟩";
+        clearScreen();
+    }
+
+    board.print();
+    int g = board.count(u8"🟩");
+    int w = board.count(u8"⬜");
+    
+    std::cout << "\n=== GAME OVER ===\n";
+    std::cout << "🟩 Green: " << g << "\n";
+    std::cout << "⬜ White: " << w << "\n";
+    
+    if (g > w) {
+        if (humanPlayer == u8"🟩") 
+            std::cout << GREEN_FG << "🎉 You win!" << RESET << "\n";
+        else 
+            std::cout << RED_FG << "Computer wins!" << RESET << "\n";
+    }
+    else if (w > g) {
+        if (humanPlayer == u8"⬜") 
+            std::cout << GREEN_FG << "🎉 You win!" << RESET << "\n";
+        else 
+            std::cout << RED_FG << "Computer wins!" << RESET << "\n";
+    }
+    else {
+        std::cout << YELLOW_FG << "Draw!" << RESET << "\n";
+    }
+
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+
+    std::ofstream score("scoreboard.txt", std::ios::app);
+    if (score.is_open()) {
+        if (g > w) {
+            if (humanPlayer == u8"🟩") score << "Human (Green)\n";
+            else score << "Computer (Green)\n";
+        }
+        else if (w > g) {
+            if (humanPlayer == u8"⬜") score << "Human (White)\n";
+            else score << "Computer (White)\n";
+        }
+        else score << "Draw\n";
+        score.close();
+    }
+}
+
+void Game::playTwoPlayer() {
     clearScreen();
     startTimer();
 
     while (true) {
-
-            std::cout << BLUE_FG << "⏱️ Time: " << RESET 
-              << std::fixed << std::setprecision(1) 
-              << gameDurationSeconds() << " seconds" 
-              << "  |  " << (currentPlayer == u8"🟩" ? "🟩 Green's turn" : "⬜ White's turn") 
-              << "\n\n";
+        std::cout << BLUE_FG << "⏱️ Time: " << RESET 
+                  << std::fixed << std::setprecision(1) 
+                  << gameDurationSeconds() << " seconds" 
+                  << "  |  " << (currentPlayer == u8"🟩" ? "🟩 Green's turn" : "⬜ White's turn") 
+                  << "\n\n";
 
         board.showValidMoves(currentPlayer);
 
@@ -221,7 +396,7 @@ void Game::playGame() {
             clearScreen();
             continue;
         }
-        
+
         int row = std::stoi(input);
         int col;
         std::cin >> col;
@@ -240,9 +415,14 @@ void Game::playGame() {
     board.print();
     int g = board.count(u8"🟩");
     int w = board.count(u8"⬜");
-    if (g > w) std::cout << "Green wins\n";
-    else if (w > g) std::cout << "White wins\n";
-    else std::cout << "Draw\n";
+    
+    std::cout << "\n=== GAME OVER ===\n";
+    std::cout << "🟩 Green: " << g << "\n";
+    std::cout << "⬜ White: " << w << "\n";
+    
+    if (g > w) std::cout << GREEN_FG << "Green wins!\n" << RESET;
+    else if (w > g) std::cout << GREEN_FG << "White wins!\n" << RESET;
+    else std::cout << YELLOW_FG << "Draw!\n" << RESET;
 
     std::cout << "\nPress Enter to continue...";
     std::cin.ignore();
@@ -250,35 +430,42 @@ void Game::playGame() {
 
     std::ofstream score("scoreboard.txt", std::ios::app);
     if (score.is_open()) {
-        if (g > w) score << "Green\n";
-        else if (w > g) score << "White\n";
-        else score << "Draw\n";
+        if (g > w) score << "Green (2P)\n";
+        else if (w > g) score << "White (2P)\n";
+        else score << "Draw (2P)\n";
         score.close();
     }
-    std::cout << gameDurationSeconds();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+}
+
+void Game::playGame() {
+    if (singlePlayer) {
+        playSinglePlayer();
+    } else {
+        playTwoPlayer();
+    }
 }
 
 void Game::run() {
     clearScreen();
     intro();
 
-    main_menue:
+    main_menu:
         while (true) {
             int c = menu();
             clearScreen();
 
         switch (c) {
             case 0:
-                choosePiece();
+                chooseGameMode();
                 playGame();
-                goto main_menue;
+                goto main_menu;
                 break;
 
             case 1:
                 if (loadGame()) {
+                    singlePlayer = false;
                     playGame();
-                    goto main_menue;
+                    goto main_menu;
                 }
                 break;
 
@@ -289,8 +476,9 @@ void Game::run() {
                 if (loadFromFile(filename)) {
                     std::cout << GREEN_FG << "Game loaded from " << filename << RESET << "\n";
                     std::this_thread::sleep_for(std::chrono::seconds(1));
+                    singlePlayer = false;
                     playGame();
-                    goto main_menue;
+                    goto main_menu;
                 } else {
                     std::cout << RED_FG << "Failed to load from " << filename << RESET << "\n";
                     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -306,18 +494,30 @@ void Game::run() {
                     std::cout << "No games recorded yet.\n";
                 } else {
                     std::string result;
-                    int gWins = 0, wWins = 0, draws = 0;
+                    int gWins = 0, wWins = 0, draws = 0, humanWins = 0, computerWins = 0;
 
-                    while (score >> result) {
-                        if (result == "Green") gWins++;
-                        else if (result == "White") wWins++;
+                    while (std::getline(score, result)) {
+                        if (result == "Green (2P)") gWins++;
+                        else if (result == "White (2P)") wWins++;
+                        else if (result == "Draw (2P)") draws++;
+                        else if (result == "Human (Green)") humanWins++;
+                        else if (result == "Human (White)") humanWins++;
+                        else if (result == "Computer (Green)") computerWins++;
+                        else if (result == "Computer (White)") computerWins++;
                         else if (result == "Draw") draws++;
                     }
 
                     std::cout << "Scoreboard:\n";
-                    std::cout << "Green wins: " << gWins << "\n";
-                    std::cout << "White wins: " << wWins << "\n";
-                    std::cout << "Draws: " << draws << "\n";
+                    std::cout << "┌─────────────────────┐\n";
+                    std::cout << "│ Green wins: " << std::setw(4) << gWins << " │\n";
+                    std::cout << "│ White wins: " << std::setw(4) << wWins << " │\n";
+                    std::cout << "│ Draws:      " << std::setw(4) << draws << " │\n";
+                    if (humanWins > 0 || computerWins > 0) {
+                        std::cout << "├─────────────────────┤\n";
+                        std::cout << "│ Human wins: " << std::setw(4) << humanWins << " │\n";
+                        std::cout << "│ Computer wins: " << std::setw(3) << computerWins << " │\n";
+                    }
+                    std::cout << "└─────────────────────┘\n";
 
                     score.close();
                 }
@@ -326,7 +526,7 @@ void Game::run() {
                 std::cin.ignore();
                 std::cin.get();
                 clearScreen();
-                goto main_menue;
+                goto main_menu;
                 break;
             }
 
@@ -339,7 +539,7 @@ void Game::run() {
                 std::cout << "\nInvalid choice! Please try again.\n";
                 std::this_thread::sleep_for(std::chrono::seconds(2));
                 clearScreen();
-                goto main_menue;
+                goto main_menu;
         }
-            }
     }
+}
