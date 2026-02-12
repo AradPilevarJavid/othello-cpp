@@ -93,9 +93,10 @@ bool Game::loadFromFile(const std::string& filename) {
     currentPlayer = (player == 'G') ? u8"🟩" : u8"⬜";
     
     for (int i = 0; i < 8; i++) {
+        std::string row;
+        in >> row;
         for (int j = 0; j < 8; j++) {
-            char c;
-            in >> c;
+            char c = row[j];
             if (c == 'G') board.setPiece(i, j, u8"🟩");
             else if (c == 'W') board.setPiece(i, j, u8"⬜");
             else board.setPiece(i, j, "");
