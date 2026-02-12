@@ -128,19 +128,21 @@ void Game::showSaveMenu() {
 
 bool Game::saveGame() {
     std::ofstream out("othello_save.txt");
-    if (!out.is_open()) {
-        return false;
-    }
-    out << currentPlayer << "\n";
+    if (!out.is_open()) return false;
+    
+    out << (currentPlayer == u8"🟩" ? 'G' : 'W') << "\n";
+    
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            out << board.getPiece(i, j) << " ";
+            std::string piece = board.getPiece(i, j);
+            if (piece == u8"🟩") out << 'G';
+            else if (piece == u8"⬜") out << 'W';
+            else out << '.';
         }
         out << "\n";
     }
     out.close();
     std::cout << GREEN_FG << "Game saved!\n" << RESET;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
     return true;
 }
 
@@ -148,20 +150,25 @@ bool Game::loadGame() {
     std::ifstream in("othello_save.txt");
     if (!in.is_open()) {
         std::cout << RED_FG << "No saved game found!\n" << RESET;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
         return false;
     }
-    in >> currentPlayer;
+    
+    char player;
+    in >> player;
+    currentPlayer = (player == 'G') ? u8"🟩" : u8"⬜";
+    
     for (int i = 0; i < 8; i++) {
+        std::string row;
+        in >> row;
         for (int j = 0; j < 8; j++) {
-            std::string piece;
-            in >> piece;
-            board.setPiece(i, j, piece);
+            char c = row[j];
+            if (c == 'G') board.setPiece(i, j, u8"🟩");
+            else if (c == 'W') board.setPiece(i, j, u8"⬜");
+            else board.setPiece(i, j, "");
         }
     }
     in.close();
     std::cout << GREEN_FG << "Game loaded!\n" << RESET;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
     return true;
 }
 
