@@ -1,0 +1,129 @@
+#include "Board.h"
+#include <iostream>
+
+#define RESET "\033[0m"
+#define BLUE_FG "\033[34m"
+#define RED_FG "\033[31m"
+#define GREEN_FG "\033[32m"
+#define YELLOW_FG "\033[33m"
+
+Board::Board() {}
+
+bool Board::canPlace(int row, int col, const std::string& piece) const {
+    if (!inBounds(row,col) || board[row][col] != "") return false;
+    return hasFlippable(row,col,piece);
+}
+
+std::string Board::getPiece(int row, int col) const {
+    if (inBounds(row, col)) return board[row][col];
+    return "";
+}
+
+void Board::setPiece(int row, int col, const std::string& piece) {
+    if (inBounds(row, col)) board[row][col] = piece;
+}
+
+bool Board::inBounds(int row, int col) const {
+    return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
+}
+
+std::string Board::opponent(const std::string& piece) const {
+    return piece == u8"🟩" ? u8"⬜" : u8"🟩";
+}
+
+bool Board::hasFlippable(int row, int col, const std::string& piece) const {
+    int dx[8] = {-1,-1,-1,0,0,1,1,1};
+    int dy[8] = {-1,0,1,-1,1,-1,0,1};
+    std::string o = opponent(piece);
+
+    for (int d = 0; d < 8; d++) {
+        int i = row + dx[d], j = col + dy[d];
+        if (!inBounds(i,j) || board[i][j] != o) continue;
+        i += dx[d]; j += dy[d];
+        while (inBounds(i,j) && board[i][j] == o) { i += dx[d]; j += dy[d]; }
+        if (inBounds(i,j) && board[i][j] == piece) return true;
+    }
+    return false;
+}
+
+void Board::flip(int row, int col, const std::string& piece) {
+    int dx[8] = {-1,-1,-1,0,0,1,1,1};
+    int dy[8] = {-1,0,1,-1,1,-1,0,1};
+    std::string o = opponent(piece);
+
+    for (int d = 0; d < 8; d++) {
+        int i = row + dx[d], j = col + dy[d];
+        if (!inBounds(i,j) || board[i][j] != o) continue;
+        int si = i, sj = j;
+        i += dx[d]; j += dy[d];
+        while (inBounds(i,j) && board[i][j] == o) { i += dx[d]; j += dy[d]; }
+        if (inBounds(i,j) && board[i][j] == piece) {
+            while (si != i || sj != j) {
+                board[si][sj] = piece;
+                si += dx[d];
+                sj += dy[d];
+            }
+        }
+    }
+}
+
+bool Board::placePiece(int row, int col, const std::string& piece) {
+    if (!inBounds(row,col) || board[row][col] != "") return false;
+    if (!hasFlippable(row,col,piece)) return false;
+    board[row][col] = piece;
+    flip(row,col,piece);
+    return true;
+}
+
+bool Board::hasAnyMove(const std::string& piece) const {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (board[i][j] == "" && hasFlippable(i,j,piece)) return true;
+    return false;
+}
+
+int Board::count(const std::string& piece) const {
+    int c = 0;
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (board[i][j] == piece) c++;
+    return c;
+}
+
+void Board::print(const std::string& highlightPiece) const {
+    std::cout << " " << BLUE_FG << "  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐" << RESET << "\n";
+
+    for (int i = 0; i < SIZE; i++) {
+        std::cout << " " << i << " " << BLUE_FG << "│" << RESET;
+        for (int j = 0; j < SIZE; j++) {
+            if (board[i][j] != "") {
+                std::cout << "  " << board[i][j] << "  " << BLUE_FG << "│" << RESET;
+            } else if (highlightPiece != "" && canPlace(i,j,highlightPiece)) {
+                std::cout << "  " << YELLOW_FG << "• " << RESET << "  " << BLUE_FG << "│" << RESET;
+            } else {
+                std::cout << "      " << BLUE_FG << "│" << RESET;
+            }
+        }
+        std::cout << "\n";
+        if (i != SIZE-1) std::cout << " " << BLUE_FG
+            << "  ├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤" << RESET << "\n";
+    }
+    std::cout << " " << BLUE_FG
+        << "  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘" << RESET << "\n";
+    std::cout << "     0      1      2      3      4      5      6      7 \n";
+}
+
+void Board::showValidMoves(const std::string& piece) {
+    print(piece);
+}
+
+void Board::init() {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            board[i][j] = "";
+
+    board[3][3] = u8"🟩";
+    board[4][4] = u8"🟩";
+    board[3][4] = u8"⬜";
+    board[4][3] = u8"⬜";
+}
