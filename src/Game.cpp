@@ -18,8 +18,8 @@ Game::Game() {
     currentPlayer = u8"🟩";
     singlePlayer = false;
     humanPlayer = u8"🟩";
-    aiMode = 1;
     historyIndex = -1;
+    aiMode = 1;
     
     unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
     randomGenerator = std::mt19937(seed);
@@ -81,40 +81,46 @@ double Game::gameDurationSeconds() {
 bool Game::saveToFile(const std::string& filename) {
     std::ofstream out(filename);
     if (!out.is_open()) return false;
-    
+
+    out << (singlePlayer ? 'S' : 'M') << '\n';
     if (singlePlayer) {
-        out << "S\n";
-        out << (humanPlayer == u8"🟩" ? 'G' : 'W') << " " << aiMode << "\n";
-    } else {
-        out << "M\n";
+        out << (humanPlayer == u8"🟩" ? 'G' : 'W') << ' ' << aiMode << '\n';
     }
-    
-    out << (currentPlayer == u8"🟩" ? 'G' : 'W') << "\n";
-    
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
+
+    out << (currentPlayer == u8"🟩" ? 'G' : 'W') << '\n';
+
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
             std::string piece = board.getPiece(i, j);
             if (piece == u8"🟩") out << 'G';
             else if (piece == u8"⬜") out << 'W';
             else out << '.';
         }
-        out << "\n";
+        out << '\n';
     }
-    out.close();
-    return true;
+
+    out << gameDurationSeconds() << '\n';
+    return out.good();
 }
 
 bool Game::loadFromFile(const std::string& filename) {
     std::ifstream in(filename);
     if (!in.is_open()) return false;
-    
+
+    // Clear the board before filling it
+    for (int i = 0; i < 8; ++i)
+        for (int j = 0; j < 8; ++j)
+            board.setPiece(i, j, "");
+
+    // 1. Game mode
     char mode;
-    in >> mode;
+    if (!(in >> mode)) return false;
+
     if (mode == 'S') {
         singlePlayer = true;
         char humanChar;
         int aiChoice;
-        in >> humanChar >> aiChoice;
+        if (!(in >> humanChar >> aiChoice)) return false;
         humanPlayer = (humanChar == 'G') ? u8"🟩" : u8"⬜";
         aiMode = aiChoice;
     } else if (mode == 'M') {
@@ -123,22 +129,40 @@ bool Game::loadFromFile(const std::string& filename) {
     } else {
         return false;
     }
-    
-    char player;
-    in >> player;
-    currentPlayer = (player == 'G') ? u8"🟩" : u8"⬜";
-    
-    for (int i = 0; i < 8; i++) {
+
+    // 2. Current player
+    char playerChar;
+    if (!(in >> playerChar)) return false;
+    currentPlayer = (playerChar == 'G') ? u8"🟩" : u8"⬜";
+
+    // 3. Board rows
+    for (int i = 0; i < 8; ++i) {
         std::string row;
-        in >> row;
-        for (int j = 0; j < 8; j++) {
+        if (!(in >> row) || row.length() != 8) return false;
+        for (int j = 0; j < 8; ++j) {
             char c = row[j];
             if (c == 'G') board.setPiece(i, j, u8"🟩");
             else if (c == 'W') board.setPiece(i, j, u8"⬜");
-            else board.setPiece(i, j, "");
+            else if (c == '.') board.setPiece(i, j, "");
+            else return false;
         }
     }
-    in.close();
+
+    // 4. Elapsed time (optional)
+    double savedTime = 0.0;
+    if (in >> savedTime) {
+        gameTimeStart = std::chrono::steady_clock::now() -
+                        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                            std::chrono::duration<double>(savedTime));
+    } else {
+        startTimer();
+    }
+
+    // 5. Reset undo history to the loaded board
+    history.clear();
+    historyIndex = -1;
+    saveToHistory();
+
     return true;
 }
 
@@ -152,15 +176,18 @@ void Game::showSaveMenu() {
     std::cout << "   Filename: ";
 
     std::string filename;
-    std::cin >> filename;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    
-    if (saveToFile(filename)) {
+    std::getline(std::cin, filename);
+
+    if (filename.empty()) {
+        std::cout << RED_FG << "\n   Empty filename. Save cancelled." << RESET << "\n";
+    } else if (saveToFile(filename)) {
         std::cout << GREEN_FG << "\n   Game saved successfully to " << filename << RESET << "\n";
     } else {
         std::cout << RED_FG << "\n   Error saving game!" << RESET << "\n";
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    std::cout << "\n   Press Enter to continue...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 bool Game::saveGame() {
@@ -233,7 +260,6 @@ void Game::playSinglePlayer() {
     history.clear();
     historyIndex = -1;
     saveToHistory();
-    startTimer();
 
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
@@ -314,7 +340,6 @@ void Game::playTwoPlayer() {
     history.clear();
     historyIndex = -1;
     saveToHistory();
-    startTimer();
 
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
@@ -373,7 +398,6 @@ void Game::playTwoPlayer() {
 }
 
 void Game::playGame() {
-    board.init();
     if (singlePlayer) {
         playSinglePlayer();
     } else {
@@ -518,9 +542,12 @@ void Game::run() {
     while (true) {
         int choice = menu();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        
         switch (choice) {
             case 0:
                 chooseGameMode();
+                board.init();
+                startTimer();
                 playGame();
                 break;
             case 1:

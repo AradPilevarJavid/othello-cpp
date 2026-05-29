@@ -53,7 +53,6 @@ Move AI::findBestMoveMinimax(int depth) {
                 tempBoard.placePiece(i, j, this->player);
                 
                 int score = minimax(tempBoard, depth - 1, false);
-
                 if (score > bestScore) {
                     bestScore = score;
                     bestMove = {i, j};
